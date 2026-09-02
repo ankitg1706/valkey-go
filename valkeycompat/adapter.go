@@ -1003,25 +1003,47 @@ func (c *Compat) Get(ctx context.Context, key string) *StringCmd {
 	resp := c.client.Do(ctx, cmd)
 	return newStringCmd(resp)
 }
+
+type bufferWriter struct {
+	buf []byte
+	pos int
+}
+
+func (w *bufferWriter) Write(p []byte) (int, error) {
+	remaining := len(w.buf) - w.pos
+
+	if remaining == 0 {
+		return 0, io.ErrShortBuffer
+	}
+
+	n := copy(w.buf[w.pos:], p)
+	w.pos += n
+
+	if n < len(p) {
+		return n, io.ErrShortBuffer
+	}
+
+	return n, nil
+}
 func (c *Compat) GetToBuffer(ctx context.Context, key string, buf []byte) *ZeroCopyStringCmd {
 	cmd := &ZeroCopyStringCmd{
+		baseCmd: baseCmd[int]{},
+		buf:     buf,
+	}
+
+	stream := c.client.DoStream(
+		ctx,
+		c.client.B().Get().Key(key).Build(),
+	)
+
+	writer := &bufferWriter{
 		buf: buf,
 	}
 
-	resp := c.client.Do(ctx, c.client.B().Get().Key(key).Build())
+	n, err := stream.WriteTo(writer)
 
-	data, err := resp.AsBytes()
-	if err != nil {
-		cmd.SetErr(err)
-		return cmd
-	}
-
-	n := copy(buf, data)
-	cmd.SetVal(n)
-
-	if n < len(data) {
-		cmd.SetErr(io.ErrShortBuffer)
-	}
+	cmd.SetVal(int(n))
+	cmd.SetErr(err)
 
 	return cmd
 }
