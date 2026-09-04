@@ -489,6 +489,23 @@ var _ = Describe("Commands", func() {
 			Expect(cmd.Err()).To(Equal(err))
 		}
 		{
+			cmd := &LatencyCmd{}
+			cmd.SetVal([]Latency{{
+				Name:   "command",
+				Time:   time.Unix(100, 0),
+				Latest: time.Millisecond,
+				Max:    2 * time.Millisecond,
+			}})
+			Expect(cmd.Val()).To(Equal([]Latency{{
+				Name:   "command",
+				Time:   time.Unix(100, 0),
+				Latest: time.Millisecond,
+				Max:    2 * time.Millisecond,
+			}}))
+			cmd.SetErr(err)
+			Expect(cmd.Err()).To(Equal(err))
+		}
+		{
 			cmd := &ClusterSlotsCmd{}
 			cmd.SetVal([]ClusterSlot{{Start: 1}})
 			Expect(cmd.Val()).To(Equal([]ClusterSlot{{Start: 1}}))
@@ -1059,6 +1076,14 @@ func TestCommandErrorHandling(t *testing.T) {
 			name: "TimeCmd",
 			command: func() error {
 				cmd := newTimeCmd(mockRes)
+				return cmd.Err()
+			},
+			expected: "initial error",
+		},
+		{
+			name: "LatencyCmd",
+			command: func() error {
+				cmd := newLatencyCmd(mockRes)
 				return cmd.Err()
 			},
 			expected: "initial error",
