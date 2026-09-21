@@ -99,6 +99,56 @@ func init() {
 	generators['>'] = generators['*']
 }
 
+func BenchmarkRESP3WireDecoder_Latency(b *testing.B) {
+	payloads := [][]byte{
+		[]byte("+OK\r\n"),
+		[]byte("$11\r\nhello world\r\n"),
+		[]byte("%2\r\n+one\r\n$3\r\nfoo\r\n+two\r\n$3\r\nbar\r\n"),
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		payload := payloads[i%len(payloads)]
+		r := bufio.NewReader(bytes.NewReader(payload))
+		if _, err := readNextMessage(r); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkRESP3Decode_SimpleString(b *testing.B) {
+	payload := []byte("+OK\r\n")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := readNextMessage(bufio.NewReader(bytes.NewReader(payload))); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkRESP3Decode_BulkString(b *testing.B) {
+	payload := []byte("$11\r\nhello world\r\n")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := readNextMessage(bufio.NewReader(bytes.NewReader(payload))); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkRESP3Decode_Map(b *testing.B) {
+	payload := []byte("%2\r\n+one\r\n$3\r\nfoo\r\n+two\r\n$3\r\nbar\r\n")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := readNextMessage(bufio.NewReader(bytes.NewReader(payload))); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func TestReadNextMessage(t *testing.T) {
 	b := bytes.NewBuffer(nil)
 	r := bufio.NewReader(b)

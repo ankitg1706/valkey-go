@@ -5,6 +5,57 @@ import (
 	"testing"
 )
 
+func Benchmark_Builder_Get(b *testing.B) {
+	builder := NewBuilder(NoSlot)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		cmd := builder.Get().Key("bench_key").Build()
+		PutCompleted(cmd)
+	}
+}
+
+func Benchmark_Builder_Set(b *testing.B) {
+	builder := NewBuilder(NoSlot)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		cmd := builder.Set().Key("bench_key").Value("bench_value").Build()
+		PutCompleted(cmd)
+	}
+}
+
+func Benchmark_Builder_MGet(b *testing.B) {
+	builder := NewBuilder(NoSlot)
+	keys := []string{"k1", "k2", "k3", "k4"}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		cmd := builder.Mget().Key(keys...).Build()
+		PutCompleted(cmd)
+	}
+}
+
+func Benchmark_Builder_HGetAll(b *testing.B) {
+	builder := NewBuilder(NoSlot)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		cmd := builder.Hgetall().Key("bench_hash").Build()
+		PutCompleted(cmd)
+	}
+}
+
+func Benchmark_Builder_ComplexArgs(b *testing.B) {
+	builder := NewBuilder(NoSlot)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		cmd := builder.Zadd().Key("bench_zset").Nx().Ch().ScoreMember().ScoreMember(1.5, "member1").ScoreMember(2.5, "member2").Build()
+		PutCompleted(cmd)
+	}
+}
+
 func TestPutCompleted(t *testing.T) {
 retry:
 	cs1 := get()

@@ -1763,3 +1763,60 @@ func BenchmarkSingleClient_DoCache(b *testing.B) {
 	})
 	client.Close()
 }
+
+func Benchmark_Parallel_Get(b *testing.B) {
+	ctx := context.Background()
+	client, err := NewClient(ClientOption{InitAddress: []string{"127.0.0.1:6379"}, Dialer: net.Dialer{KeepAlive: -1}})
+	if err != nil {
+		b.Skipf("live Valkey benchmark skipped: %v", err)
+	}
+	b.Cleanup(func() { client.Close() })
+	if err := client.Do(ctx, client.B().Set().Key("bench_key").Value("bench_value").Build()).Error(); err != nil {
+		b.Skipf("live Valkey benchmark skipped: %v", err)
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			if err := client.Do(ctx, client.B().Get().Key("bench_key").Build()).Error(); err != nil {
+				b.Errorf("unexpected %v", err)
+			}
+		}
+	})
+}
+
+func Benchmark_Parallel_Set(b *testing.B) {
+	ctx := context.Background()
+	client, err := NewClient(ClientOption{InitAddress: []string{"127.0.0.1:6379"}, Dialer: net.Dialer{KeepAlive: -1}})
+	if err != nil {
+		b.Skipf("live Valkey benchmark skipped: %v", err)
+	}
+	b.Cleanup(func() { client.Close() })
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			if err := client.Do(ctx, client.B().Set().Key("bench_key").Value("bench_value").Build()).Error(); err != nil {
+				b.Errorf("unexpected %v", err)
+			}
+		}
+	})
+}
+
+func Benchmark_Parallel_Ping(b *testing.B) {
+	ctx := context.Background()
+	client, err := NewClient(ClientOption{InitAddress: []string{"127.0.0.1:6379"}, Dialer: net.Dialer{KeepAlive: -1}})
+	if err != nil {
+		b.Skipf("live Valkey benchmark skipped: %v", err)
+	}
+	b.Cleanup(func() { client.Close() })
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			if err := client.Do(ctx, client.B().Ping().Build()).Error(); err != nil {
+				b.Errorf("unexpected %v", err)
+			}
+		}
+	})
+}
